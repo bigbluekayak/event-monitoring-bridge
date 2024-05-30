@@ -22,9 +22,6 @@
     "addons": [
         "heroku-redis", {
             "plan": "premium-0"
-        },
-        "scheduler", {
-            "plan": "standard"
         }
     ]
 }
