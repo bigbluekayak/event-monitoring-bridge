@@ -35,11 +35,9 @@ def cor_token_header(api_key):
         }
 
 def last_run():
-    # TODO: get Redis connection from env variable
-    r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+    r = redis.from_url(os.environ.get("REDIS_URL"), decode_responses=True)
     x = r.get('last_run')
     if x:
-        print(x)
         return x
     else:
         return datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -50,11 +48,11 @@ def send_to_cor(log_entries):
     api_key = os.environ['COR_API_KEY']
 
     header = cor_token_header(api_key)
-    print(header)
 
     r = requests.post(url, headers=header, data=log_entries)
     if r.status_code == 200:
-        print(r.text)
+        logs_sent = len(log_entries)
+        print(f"successfully sent {logs_sent} to Coralogix")
     else:
         print(f"Error: {r.status_code}, {r.text}")
 
@@ -66,8 +64,6 @@ def get_token(client_id, client_secret):
 
     url = host + token_path
 
-    print(url)
-
     payload = {
         'grant_type': 'client_credentials',
         'client_id': client_id,
@@ -76,6 +72,7 @@ def get_token(client_id, client_secret):
    
     r = requests.post(url, data=payload)
     if r.status_code == 200:
+        print("Successfully retrieved token")
         return r.json()['access_token']
     else:
         print(f"Error: {r.status_code}")
@@ -88,9 +85,9 @@ def get_logs(token):
     
     # Get log files older than last run time
     query = "SELECT Id, EventType, Interval, LogDate, LogFile FROM EventLogFile WHERE Interval = 'Hourly' AND LogDate >= " + last_run()    
-    print(query)
+
     url = host + logs_path + query
-    print(url)
+
     r = requests.get(url, headers=sf_token_header(token))
     if r.status_code == 200:
         rx.set('last_run', datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'))
@@ -126,7 +123,6 @@ def merge_and_send(event_type, log_file):
     del pandas_df['TIMESTAMP']
     
     # Update columns to get ready for Coralogix
-    
     # Add text columns
     if 'text' not in pandas_df.columns:
         pandas_df['text'] = ''
@@ -138,7 +134,6 @@ def merge_and_send(event_type, log_file):
         if col == 'timestamp' or col == 'applicationName' or col == 'subsystemName' or col == 'text':
             continue
         else:
-            #pandas_df['text'] = pandas_df['text'] + col + "=" + pandas_df[col] + '|'
             pandas_df.drop(col, axis = 1, inplace = True)
 
     # Send to Coralogix
@@ -156,7 +151,7 @@ def get_log(token, log):
     else:
         print(f"Error: {r.status_code}")
 
-if os.environ['CLIENT_ID'] and os.environ['CLIENT_SECRET']:
+if os.environ['CLIENT_ID'] and os.environ['CLIENT_SECRET'] and os.environ['HOST'] and os.environ['API_VERSION'] and os.environ['COR_API_KEY'] and os.environ['REDIS_URL']:
     print("Getting token...")
     token = get_token(os.environ['CLIENT_ID'], os.environ['CLIENT_SECRET'])
 
@@ -172,4 +167,6 @@ if os.environ['CLIENT_ID'] and os.environ['CLIENT_SECRET']:
                 get_log(token, x)
                 
 else:
-    print("Error: Missing environment variables")
+    raise RuntimeError("Set up environment variables before running.")
+
+print('Done')

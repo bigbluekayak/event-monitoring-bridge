@@ -1,0 +1,30 @@
+{
+    "name": "Event Monitoring Coralogix bridge",
+    "description": "Send Salesforce Event Monitoring logs to Coralogix",
+    "env": {
+        "HOST": {
+            "description": "Salesforce host in the format https://[YOUR DOMAIN].my.salesforce.com"
+        },
+        "CLIENT_ID": {
+            "description": "See https://help.salesforce.com/s/articleView?id=sf.connected_app_client_credentials_setup.htm&type=5"
+        },
+        "CLIENT_SECRET": {
+            "description": "See https://help.salesforce.com/s/articleView?id=sf.connected_app_client_credentials_setup.htm&type=5"
+        },
+        "API_VERSION": {
+            "description": "Version of the Salesforce API to use",
+            "value": "V60.0"
+        },
+        "COR_API_KEY": {
+            "description": "Coralogix API key"
+        }
+    },
+    "addons": [
+        "heroku-redis", {
+            "plan": "premium-0"
+        },
+        "scheduler", {
+            "plan": "standard"
+        }
+    ]
+}
