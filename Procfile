@@ -1,1 +1,2 @@
-worker: python -u worker.py
+worker: celery --app=event_monitoring_logs.app worker 
+clock: python3 clock.py

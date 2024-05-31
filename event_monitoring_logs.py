@@ -21,6 +21,10 @@ import pandas
 import io
 import redis
 import datetime
+import celery
+
+app = celery.Celery('example')
+app.conf.update(BROKER_URL=os.environ['REDIS_URL'], CELERY_RESULT_BACKEND=os.environ['REDIS_URL'])  
 
 host = os.environ['HOST']
 
@@ -88,16 +92,28 @@ def get_logs(token):
 
     url = host + logs_path + query
 
+
     r = requests.get(url, headers=sf_token_header(token))
+
     if r.status_code == 200:
+        logs = r.json()
+
+        length = len(logs['records'])
+        print(f"Found {length} logs")
+    
+        for log in logs['records']:
+            get_log(token, log)
+            # merge_and_send(log['EventType'], log) # CHANGED HERE
+        
         rx.set('last_run', datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'))
-        return r.json()
     else:
         print(f"Error: {r.status_code}, {r.text}")
         return None
     
 def merge_and_send(event_type, log_file):
     # Get Salesforce Event Logs into Coralogix log format and send
+
+    print(f"Processing {log_file}")
 
     f = io.StringIO(log_file)
     reader = csv.reader(f)
@@ -149,24 +165,18 @@ def get_log(token, log):
     if r.status_code == 200:
         merge_and_send(log['EventType'], r.text)
     else:
-        print(f"Error: {r.status_code}")
+        print(f"Error: {r.status_code}, {r.text}")
 
-if os.environ['CLIENT_ID'] and os.environ['CLIENT_SECRET'] and os.environ['HOST'] and os.environ['API_VERSION'] and os.environ['COR_API_KEY'] and os.environ['REDIS_URL']:
-    print("Getting token...")
-    token = get_token(os.environ['CLIENT_ID'], os.environ['CLIENT_SECRET'])
+@app.task
+def process():
+    if os.environ['CLIENT_ID'] and os.environ['CLIENT_SECRET'] and os.environ['HOST'] and os.environ['API_VERSION'] and os.environ['COR_API_KEY'] and os.environ['REDIS_URL']:
+        print("Getting token...")
+        token = get_token(os.environ['CLIENT_ID'], os.environ['CLIENT_SECRET'])
 
-    if token:
-        print("Getting logs...")
-        logs = get_logs(token)
-        
-        if logs:
-            length = len(logs['records'])
-            print(f"Found {length} logs")
-            
-            for x in logs['records']:
-                get_log(token, x)
-                
-else:
-    raise RuntimeError("Set up environment variables before running.")
+        if token:
+            print("Getting logs...")
+            get_logs(token)
+    else:
+        raise RuntimeError("Set up environment variables before running.")
 
-print('Done')
+    print('Done')  
