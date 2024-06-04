@@ -23,6 +23,7 @@ import redis
 import datetime
 import celery
 import ssl
+from urllib.parse import urlparse
 
 app = celery.Celery('event-monitoring-bridge', broker_use_ssl = {
     'ssl_cert_reqs': ssl.CERT_NONE
