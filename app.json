@@ -28,11 +28,11 @@
     "formation": {
         "clock": {
           "quantity": 1,
-          "size": "standard"
+          "size": "standard-1x"
         },
         "worker": {
             "quantity": 1,
-            "size": "standard"
+            "size": "standard-1x"
           }
     }    
 }
