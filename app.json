@@ -1,6 +1,7 @@
 {
     "name": "Event Monitoring Coralogix bridge",
     "description": "Send Salesforce Event Monitoring logs to Coralogix",
+    "repository": "https://github.com/meley_sfemu/event-monitoring-bridge",
     "env": {
         "HOST": {
             "description": "Salesforce host in the format https://[YOUR DOMAIN].my.salesforce.com"
