@@ -22,7 +22,7 @@
     },
     "addons": [
         "heroku-redis", {
-            "plan": "premium-0"
+            "plan": "Premium 0"
         }
     ],
     "formation": {
