@@ -14,7 +14,7 @@
         },
         "API_VERSION": {
             "description": "Version of the Salesforce API to use",
-            "value": "V60.0"
+            "value": "v60.0"
         },
         "COR_API_KEY": {
             "description": "Coralogix API key"
@@ -24,5 +24,15 @@
         "heroku-redis", {
             "plan": "premium-0"
         }
-    ]
+    ],
+    "formation": {
+        "clock": {
+          "quantity": 1,
+          "size": "standard"
+        },
+        "worker": {
+            "quantity": 1,
+            "size": "standard"
+          }
+    }    
 }
