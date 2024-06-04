@@ -22,8 +22,14 @@ import io
 import redis
 import datetime
 import celery
+import ssl
 
-app = celery.Celery('example')
+app = celery.Celery('event-monitoring-bridge', broker_use_ssl = {
+    'ssl_cert_reqs': ssl.CERT_NONE
+}, redis_backend_use_ssl = {
+    'ssl_cert_reqs': ssl.CERT_NONE
+})
+
 app.conf.update(BROKER_URL=os.environ['REDIS_URL'], CELERY_RESULT_BACKEND=os.environ['REDIS_URL'])  
 
 host = os.environ['HOST']
@@ -39,7 +45,9 @@ def cor_token_header(api_key):
         }
 
 def last_run():
-    r = redis.from_url(os.environ.get("REDIS_URL"), decode_responses=True)
+    url = urlparse(os.environ.get("REDIS_URL"))
+    r = redis.Redis(host=url.hostname, port=url.port, password=url.password, ssl=True, ssl_cert_reqs=None, decode_responses=True)
+
     x = r.get('last_run')
     if x:
         return x
@@ -83,7 +91,9 @@ def get_token(client_id, client_secret):
         return None
     
 def get_logs(token):
-    rx = redis.Redis(host='localhost', port=6379, db=0)
+
+    url = urlparse(os.environ.get("REDIS_URL"))
+    rx = redis.Redis(host=url.hostname, port=url.port, password=url.password, ssl=True, ssl_cert_reqs=None)
 
     logs_path = "/services/data/" + os.environ['API_VERSION'] + "/query/?q="
     
