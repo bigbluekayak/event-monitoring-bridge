@@ -22,8 +22,10 @@ import io
 import redis
 import datetime
 import celery
-import ssl
 from urllib.parse import urlparse
+import logging
+
+logger = logging.getLogger(__name__)
 
 app = celery.Celery('event-monitoring-bridge', broker=os.environ['REDIS_URL'])
 
@@ -37,7 +39,7 @@ def cor_token_header(api_key):
     return {
         'Authorization': f'Bearer {api_key}',
         'Content-Type': "application/json"
-        }
+    }
 
 def last_run():
     rx = get_redis()
@@ -58,9 +60,9 @@ def send_to_cor(log_entries):
     r = requests.post(url, headers=header, data=log_entries)
     if r.status_code == 200:
         logs_sent = len(log_entries)
-        print(f"successfully sent {logs_sent} to Coralogix")
+        logger.info(f"successfully sent {logs_sent} to Coralogix")
     else:
-        print(f"Error: {r.status_code}, {r.text}")
+        logger.error(f"Error: {r.status_code}, {r.text}")
 
 def get_token(client_id, client_secret):
     # Use Client Credentials Flow to get a token.
@@ -78,10 +80,10 @@ def get_token(client_id, client_secret):
    
     r = requests.post(url, data=payload)
     if r.status_code == 200:
-        print("Successfully retrieved token")
+        logger.info("Successfully retrieved token")
         return r.json()['access_token']
     else:
-        print(f"Error: {r.status_code}")
+        logger.error(f"Error: {r.status_code}")
         return None
     
 def get_redis():
@@ -106,7 +108,7 @@ def get_logs(token):
         logs = r.json()
 
         length = len(logs['records'])
-        print(f"Found {length} logs")
+        logger.info(f"Found {length} logs")
     
         for log in logs['records']:
             get_log(token, log)
@@ -115,13 +117,13 @@ def get_logs(token):
         rx = get_redis()
         rx.set('last_run', datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'))
     else:
-        print(f"Error: {r.status_code}, {r.text}")
+        logger.error(f"Error: {r.status_code}, {r.text}")
         return None
     
 def merge_and_send(event_type, log_file):
     # Get Salesforce Event Logs into Coralogix log format and send
 
-    print(f"Processing {log_file}")
+    logger.info(f"Processing {log_file}")
 
     f = io.StringIO(log_file)
     reader = csv.reader(f)
@@ -161,11 +163,11 @@ def merge_and_send(event_type, log_file):
             pandas_df.drop(col, axis = 1, inplace = True)
 
     # Send to Coralogix
-    print("Sending to Coralogix...")
+    logger.info("Sending to Coralogix...")
     send_to_cor(pandas_df.to_json(orient='records'))
 
 def get_log(token, log):
-    print(f"Retrieving {log['LogFile']}")
+    logger.info(f"Retrieving {log['LogFile']}")
 
     url = host + log['LogFile']
     r = requests.get(url, headers=sf_token_header(token))
@@ -173,16 +175,16 @@ def get_log(token, log):
     if r.status_code == 200:
         merge_and_send(log['EventType'], r.text)
     else:
-        print(f"Error: {r.status_code}, {r.text}")
+        logger.error(f"Error: {r.status_code}, {r.text}")
 
 @app.task
 def process():
     if os.environ['CLIENT_ID'] and os.environ['CLIENT_SECRET'] and os.environ['HOST'] and os.environ['API_VERSION'] and os.environ['COR_API_KEY'] and os.environ['REDIS_URL']:
-        print("Getting token...")
+        logger.info("Getting Salesforce token...")
         token = get_token(os.environ['CLIENT_ID'], os.environ['CLIENT_SECRET'])
 
         if token:
-            print("Getting logs...")
+            logger.info("Getting logs...")
             get_logs(token)
     else:
         raise RuntimeError("Set up environment variables before running.")
