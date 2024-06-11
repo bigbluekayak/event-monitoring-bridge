@@ -91,10 +91,7 @@ def get_redis():
     else: # Production, set SSL to true
         return redis.Redis(host=url.hostname, port=url.port, password=url.password, ssl=True, ssl_cert_reqs=None, decode_responses=True)
 
-def get_logs(token):
-
-    print('LETS GET SOME LOGS')
-    
+def get_logs(token):    
     logs_path = "/services/data/" + os.environ['API_VERSION'] + "/query/?q="
     
     # Get log files older than last run time
