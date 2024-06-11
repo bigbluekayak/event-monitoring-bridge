@@ -25,13 +25,7 @@ import celery
 import ssl
 from urllib.parse import urlparse
 
-app = celery.Celery('event-monitoring-bridge', broker_use_ssl = {
-    'ssl_cert_reqs': ssl.CERT_NONE
-}, redis_backend_use_ssl = {
-    'ssl_cert_reqs': ssl.CERT_NONE
-})
-
-app.conf.update(BROKER_URL=os.environ['REDIS_URL'], CELERY_RESULT_BACKEND=os.environ['REDIS_URL'])  
+app = celery.Celery('event-monitoring-bridge', broker=os.environ['REDIS_URL'])
 
 host = os.environ['HOST']
 
@@ -41,15 +35,14 @@ def sf_token_header(token):
 def cor_token_header(api_key):
 
     return {
-        'Authorization': api_key,
+        'Authorization': f'Bearer {api_key}',
         'Content-Type': "application/json"
         }
 
 def last_run():
-    url = urlparse(os.environ.get("REDIS_URL"))
-    r = redis.Redis(host=url.hostname, port=url.port, password=url.password, ssl=True, ssl_cert_reqs=None, decode_responses=True)
+    rx = get_redis()
 
-    x = r.get('last_run')
+    x = rx.get('last_run')
     if x:
         return x
     else:
@@ -91,11 +84,17 @@ def get_token(client_id, client_secret):
         print(f"Error: {r.status_code}")
         return None
     
+def get_redis():
+    url = urlparse(os.environ.get("REDIS_URL"))
+    if 'PYTHONDEVMODE' in os.environ: # Development, set SSL to false
+        return redis.Redis(host=url.hostname, port=url.port, password=url.password, ssl=False, ssl_cert_reqs=None, decode_responses=True)
+    else: # Production, set SSL to true
+        return redis.Redis(host=url.hostname, port=url.port, password=url.password, ssl=True, ssl_cert_reqs=None, decode_responses=True)
+
 def get_logs(token):
 
-    url = urlparse(os.environ.get("REDIS_URL"))
-    rx = redis.Redis(host=url.hostname, port=url.port, password=url.password, ssl=True, ssl_cert_reqs=None)
-
+    print('LETS GET SOME LOGS')
+    
     logs_path = "/services/data/" + os.environ['API_VERSION'] + "/query/?q="
     
     # Get log files older than last run time
@@ -116,6 +115,7 @@ def get_logs(token):
             get_log(token, log)
             # merge_and_send(log['EventType'], log) # CHANGED HERE
         
+        rx = get_redis()
         rx.set('last_run', datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'))
     else:
         print(f"Error: {r.status_code}, {r.text}")
