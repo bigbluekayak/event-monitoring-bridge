@@ -10,7 +10,7 @@ Created 20th May 2024
 TODO
 
 #### Create connected app in Salesforce
-TODO (Heroku button)
+You will need to create a Connected App in Salesforce in order to get the Client Id and Secret you need.
 
 #### Install bridge on Heroku
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://www.heroku.com/deploy?template=https://github.com/bigbluekayak/event-monitoring-bridge)
