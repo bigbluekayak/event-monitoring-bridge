@@ -24,6 +24,7 @@ import datetime
 import celery
 from urllib.parse import urlparse
 import logging
+from sf_utils import get_token
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,7 @@ def send_to_cor(log_entries):
     else:
         logger.error(f"Error: {r.status_code}, {r.text}")
 
+'''
 def get_token(client_id, client_secret):
     # Use Client Credentials Flow to get a token.
     # Make sure to rotate secrets as needed.  https://help.salesforce.com/s/articleView?id=sf.connected_app_rotate_consumer_details.htm&language=en_US&type=5
@@ -85,7 +87,8 @@ def get_token(client_id, client_secret):
     else:
         logger.error(f"Error: {r.status_code}")
         return None
-    
+'''
+         
 def get_redis():
     url = urlparse(os.environ.get("REDIS_URL"))
     if 'PYTHONDEVMODE' in os.environ: # Development, set SSL to false
@@ -181,7 +184,7 @@ def get_log(token, log):
 def process():
     if os.environ['CLIENT_ID'] and os.environ['CLIENT_SECRET'] and os.environ['HOST'] and os.environ['API_VERSION'] and os.environ['COR_API_KEY'] and os.environ['REDIS_URL']:
         logger.info("Getting Salesforce token...")
-        token = get_token(os.environ['CLIENT_ID'], os.environ['CLIENT_SECRET'])
+        token = get_token(os.environ['HOST'], os.environ['CLIENT_ID'], os.environ['CLIENT_SECRET'])
 
         if token:
             logger.info("Getting logs...")
