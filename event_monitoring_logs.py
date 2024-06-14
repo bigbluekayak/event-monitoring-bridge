@@ -64,30 +64,6 @@ def send_to_cor(log_entries):
         logger.info(f"successfully sent {logs_sent} to Coralogix")
     else:
         logger.error(f"Error: {r.status_code}, {r.text}")
-
-'''
-def get_token(client_id, client_secret):
-    # Use Client Credentials Flow to get a token.
-    # Make sure to rotate secrets as needed.  https://help.salesforce.com/s/articleView?id=sf.connected_app_rotate_consumer_details.htm&language=en_US&type=5
-
-    token_path = "/services/oauth2/token"
-
-    url = host + token_path
-
-    payload = {
-        'grant_type': 'client_credentials',
-        'client_id': client_id,
-        'client_secret': client_secret
-    }
-   
-    r = requests.post(url, data=payload)
-    if r.status_code == 200:
-        logger.info("Successfully retrieved token")
-        return r.json()['access_token']
-    else:
-        logger.error(f"Error: {r.status_code}")
-        return None
-'''
          
 def get_redis():
     url = urlparse(os.environ.get("REDIS_URL"))
